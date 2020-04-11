@@ -24,30 +24,126 @@ SOFTWARE.
 package cmd
 
 import (
+	"crypto/tls"
+	"crypto/x509"
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
+	"log"
+	"net/http"
 
 	"github.com/spf13/cobra"
+	"github.com/spf13/viper"
 )
 
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
-	Short: "A brief description of your command",
-	Long: `A longer description that spans multiple lines and likely contains examples
-and usage of using your command. For example:
-
-Cobra is a CLI library for Go that empowers applications.
-This application is a tool to generate the needed files
-to quickly create a Cobra application.`,
+	Short: "List the operational state of an Agent",
+	Long:  `Lists the operational state of the an Agent`,
 	Run: func(cmd *cobra.Command, args []string) {
-		fmt.Println("list called")
+
+		type JsonResults struct {
+			Code    int    `json:"code"`
+			Status  string `json:"status"`
+			Results struct {
+				OperationalState        int      `json:"operational_state"`
+				V                       string   `json:"v"`
+				IP                      string   `json:"ip"`
+				Port                    int      `json:"port"`
+				TpmPolicy               string   `json:"tpm_policy"`
+				VtpmPolicy              string   `json:"vtpm_policy"`
+				MetaData                string   `json:"meta_data"`
+				ImaWhitelistLen         int      `json:"ima_whitelist_len"`
+				TpmVersion              int      `json:"tpm_version"`
+				AcceptTpmHashAlgs       []string `json:"accept_tpm_hash_algs"`
+				AcceptTpmEncryptionAlgs []string `json:"accept_tpm_encryption_algs"`
+				AcceptTpmSigningAlgs    []string `json:"accept_tpm_signing_algs"`
+				HashAlg                 string   `json:"hash_alg"`
+				EncAlg                  string   `json:"enc_alg"`
+				SignAlg                 string   `json:"sign_alg"`
+			} `json:"results"`
+		}
+		var urlreq string
+		var verifier_ip = viper.GetString("verifier_ip")
+		var verifier_port = viper.GetString("verifier_port")
+		// fmt.Println("uuid exists?", viper.IsSet("uuid"))
+		// fmt.Println("Get a flag:", viper.GetString("uuid"))
+		// fmt.Println("Get a port:", viper.GetInt("agent_port"))
+
+		//priv, err := ioutil.ReadFile("/var/lib/keylime/cv_ca/client-private.pem")
+		//passbyte := []byte("default")
+		//unenckey := decrypt(priv, passbyte)
+		// stringkey := fmt.Sprint(unenckey)
+		cert, err := tls.LoadX509KeyPair("/var/lib/keylime/cv_ca/client-cert.crt", "/var/lib/keylime/cv_ca/client-private-out.pem")
+		if err != nil {
+			log.Fatalf("Error reading cert: %s", err)
+		}
+		//
+		caCert, err := ioutil.ReadFile("/var/lib/keylime/cv_ca/client-cert.crt")
+		if err != nil {
+			log.Fatalf("Error reading caCert: %s", err)
+		}
+		caCertPool := x509.NewCertPool()
+		caCertPool.AppendCertsFromPEM(caCert)
+
+		// Create a HTTPS client and supply the created CA pool and certificate
+		client := &http.Client{
+			Transport: &http.Transport{
+				TLSClientConfig: &tls.Config{
+					InsecureSkipVerify: true,
+					RootCAs:            caCertPool,
+					Certificates:       []tls.Certificate{cert},
+				},
+			},
+		}
+
+		var baseurl = fmt.Sprintf("https://%s:%s/agents/", verifier_ip, verifier_port)
+
+		if viper.IsSet("uuid") {
+			urlreq = fmt.Sprintf("%s%s", baseurl, viper.GetString("uuid"))
+
+		} else {
+			urlreq = fmt.Sprintf("%s", baseurl)
+		}
+
+		response, err := client.Get(urlreq)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		//fmt.Println("HTTP Response Status:", response.StatusCode, http.StatusText(response.StatusCode))
+		//fmt.Println("The Header:", response.Header)
+		// Read the response body
+		defer response.Body.Close()
+		body, err := ioutil.ReadAll(response.Body)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		if response.StatusCode == 503 {
+			log.Printf("Cannot connect to Verifier at %v with Port %v timed out. Connection refused.", verifier_ip, verifier_port)
+		} else if response.StatusCode == 504 {
+			log.Printf("Verifier at %v with Port %v timed out.", verifier_ip, verifier_port)
+		} else if response.StatusCode == 404 {
+			log.Printf("Agent %v does not exist on the verifier. Please try to add or update agent.", viper.GetString("uuid"))
+		} else if response.StatusCode != 200 {
+			log.Printf("Unexpected response from Cloud Verifier: %v.", http.StatusText(response.StatusCode))
+		} else {
+			//fmt.Printf("%s\n", body)
+			fmt.Printf("nothing\n")
+		}
+
+		var jsonresults JsonResults
+		json.Unmarshal(body, &jsonresults)
+		fmt.Println(jsonresults.Results.OperationalState)
 	},
 }
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-
-	// Here you will define your flags and configuration settings.
+	listCmd.PersistentFlags().String("uuid", "", "A help for uuid")
+	viper.BindPFlag("uuid", listCmd.PersistentFlags().Lookup("uuid"))
 
 	// Cobra supports Persistent Flags which will work for this command
 	// and all subcommands, e.g.:

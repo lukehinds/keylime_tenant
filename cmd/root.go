@@ -25,6 +25,7 @@ package cmd
 
 import (
 	"fmt"
+	"log"
 	"os"
 
 	"github.com/spf13/cobra"
@@ -74,6 +75,39 @@ func init() {
 }
 
 // initConfig reads in config file and ENV variables if set.
+// func initConfig() {
+// 	if cfgFile != "" {
+// 		// Use config file from the flag.
+// 		viper.SetConfigFile(cfgFile)
+// 		viper.SetConfigType("toml")
+// 	} else {
+// 		// Find home directory.
+// 		home, err := homedir.Dir()
+// 		if err != nil {
+// 			fmt.Println(err)
+// 			os.Exit(1)
+// 		}
+// 		fmt.Println(home)
+
+// 		// Search config in home directory with name ".keylime_tenant" (without extension).
+// 		//viper.AddConfigPath(home)
+// 		viper.SetConfigType("toml")
+
+// 		viper.SetConfigName(".keylime_tenant")
+// 		viper.SetConfigFile("home")
+// 	}
+
+// 	//viper.AutomaticEnv() // read in environment variables that match
+
+// 	// If a config file is found, read it in.
+// 	if err := viper.ReadInConfig(); err == nil {
+// 		fmt.Println("Using config file:", viper.ConfigFileUsed())
+// 	} else {
+// 		fmt.Println("Config file not found:", viper.ConfigFileUsed())
+// 	}
+// }
+
+// initConfig reads in config file and ENV variables if set.
 func initConfig() {
 	if cfgFile != "" {
 		// Use config file from the flag.
@@ -82,19 +116,32 @@ func initConfig() {
 		// Find home directory.
 		home, err := homedir.Dir()
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Fatalln(err)
 		}
 
-		// Search config in home directory with name ".keylime_tenant" (without extension).
+		// Search config in home directory with name ".pask" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".keylime_tenant")
+		viper.SetConfigType("toml")
+
+		// In the succeeding line, the reader will note that
+		// ReadInConfig returns an error, and I am intentionally
+		// ignoring it.
+		//
+		// If the config file couldn't be read, *I don't care*. But
+		// if it can be, it should be.
+		err = viper.ReadInConfig()
+		if err != nil {
+			log.Println("Error reading config file: ", err)
+		}
 	}
 
 	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
+		log.Println("Using config file:", viper.ConfigFileUsed())
+	} else {
+		log.Println("Cannot locate config file:", viper.ConfigFileUsed())
 	}
 }
