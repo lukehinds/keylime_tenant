@@ -2,7 +2,7 @@ agent_ip = "127.0.0.1"
 agent_port = 9002
 
 verifier_ip = "127.0.0.1"
-verifier_port 8992
+verifier_port = 8992
 
 registrar_ip = "127.0.0.1"
 registrar_port = 8891
