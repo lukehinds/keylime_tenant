@@ -36,34 +36,49 @@ import (
 	"github.com/spf13/viper"
 )
 
+type JsonResults struct {
+	Code    int    `json:"code"`
+	Status  string `json:"status"`
+	Results struct {
+		OperationalState        int      `json:"operational_state"`
+		V                       string   `json:"v"`
+		IP                      string   `json:"ip"`
+		Port                    int      `json:"port"`
+		TpmPolicy               string   `json:"tpm_policy"`
+		VtpmPolicy              string   `json:"vtpm_policy"`
+		MetaData                string   `json:"meta_data"`
+		ImaWhitelistLen         int      `json:"ima_whitelist_len"`
+		TpmVersion              int      `json:"tpm_version"`
+		AcceptTpmHashAlgs       []string `json:"accept_tpm_hash_algs"`
+		AcceptTpmEncryptionAlgs []string `json:"accept_tpm_encryption_algs"`
+		AcceptTpmSigningAlgs    []string `json:"accept_tpm_signing_algs"`
+		HashAlg                 string   `json:"hash_alg"`
+		EncAlg                  string   `json:"enc_alg"`
+		SignAlg                 string   `json:"sign_alg"`
+	} `json:"results"`
+}
+
 // listCmd represents the list command
 var listCmd = &cobra.Command{
 	Use:   "list",
 	Short: "List the operational state of an Agent",
 	Long:  `Lists the operational state of the an Agent`,
 	Run: func(cmd *cobra.Command, args []string) {
-
-		type JsonResults struct {
-			Code    int    `json:"code"`
-			Status  string `json:"status"`
-			Results struct {
-				OperationalState        int      `json:"operational_state"`
-				V                       string   `json:"v"`
-				IP                      string   `json:"ip"`
-				Port                    int      `json:"port"`
-				TpmPolicy               string   `json:"tpm_policy"`
-				VtpmPolicy              string   `json:"vtpm_policy"`
-				MetaData                string   `json:"meta_data"`
-				ImaWhitelistLen         int      `json:"ima_whitelist_len"`
-				TpmVersion              int      `json:"tpm_version"`
-				AcceptTpmHashAlgs       []string `json:"accept_tpm_hash_algs"`
-				AcceptTpmEncryptionAlgs []string `json:"accept_tpm_encryption_algs"`
-				AcceptTpmSigningAlgs    []string `json:"accept_tpm_signing_algs"`
-				HashAlg                 string   `json:"hash_alg"`
-				EncAlg                  string   `json:"enc_alg"`
-				SignAlg                 string   `json:"sign_alg"`
-			} `json:"results"`
+		// Set up agent operational state mapping
+		states := map[int]string{
+			0:  "REGISTERED",
+			1:  "START",
+			2:  "SAVED",
+			3:  "GET_QUOTE",
+			4:  "GET_QUOTE_RETRY",
+			5:  "PROVIDE_V",
+			6:  "PROVIDE_V_RETRY",
+			7:  "FAILED",
+			8:  "TERMINATED",
+			9:  "INVALID_QUOTE",
+			10: "TENANT_FAILED",
 		}
+
 		var urlreq string
 		var verifier_ip = viper.GetString("verifier_ip")
 		var verifier_port = viper.GetString("verifier_port")
@@ -104,6 +119,7 @@ var listCmd = &cobra.Command{
 			urlreq = fmt.Sprintf("%s%s", baseurl, viper.GetString("uuid"))
 
 		} else {
+			// var listing bool = true
 			urlreq = fmt.Sprintf("%s", baseurl)
 		}
 
@@ -116,10 +132,11 @@ var listCmd = &cobra.Command{
 		//fmt.Println("The Header:", response.Header)
 		// Read the response body
 		defer response.Body.Close()
-		body, err := ioutil.ReadAll(response.Body)
+		responseBody, err := ioutil.ReadAll(response.Body)
 		if err != nil {
 			log.Fatal(err)
 		}
+		fmt.Println(string(responseBody))
 
 		if response.StatusCode == 503 {
 			log.Printf("Cannot connect to Verifier at %v with Port %v timed out. Connection refused.", verifier_ip, verifier_port)
@@ -127,16 +144,13 @@ var listCmd = &cobra.Command{
 			log.Printf("Verifier at %v with Port %v timed out.", verifier_ip, verifier_port)
 		} else if response.StatusCode == 404 {
 			log.Printf("Agent %v does not exist on the verifier. Please try to add or update agent.", viper.GetString("uuid"))
-		} else if response.StatusCode != 200 {
-			log.Printf("Unexpected response from Cloud Verifier: %v.", http.StatusText(response.StatusCode))
+		} else if response.StatusCode == 200 {
+			var jsonresults JsonResults
+			json.Unmarshal(responseBody, &jsonresults)
+			log.Printf("Agent Status: %v", states[jsonresults.Results.OperationalState])
 		} else {
-			//fmt.Printf("%s\n", body)
-			fmt.Printf("nothing\n")
+			log.Printf("Unexpected response from Cloud Verifier: %v.", http.StatusText(response.StatusCode))
 		}
-
-		var jsonresults JsonResults
-		json.Unmarshal(body, &jsonresults)
-		fmt.Println(jsonresults.Results.OperationalState)
 	},
 }
 
@@ -144,12 +158,4 @@ func init() {
 	rootCmd.AddCommand(listCmd)
 	listCmd.PersistentFlags().String("uuid", "", "A help for uuid")
 	viper.BindPFlag("uuid", listCmd.PersistentFlags().Lookup("uuid"))
-
-	// Cobra supports Persistent Flags which will work for this command
-	// and all subcommands, e.g.:
-	// listCmd.PersistentFlags().String("foo", "", "A help for foo")
-
-	// Cobra supports local flags which will only run when this command
-	// is called directly, e.g.:
-	// listCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
 }
