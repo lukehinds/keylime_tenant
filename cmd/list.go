@@ -156,6 +156,6 @@ var listCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-	listCmd.PersistentFlags().String("uuid", "", "A help for uuid")
+	listCmd.PersistentFlags().String("uuid", "", "The UUID of the Agent to list")
 	viper.BindPFlag("uuid", listCmd.PersistentFlags().Lookup("uuid"))
 }
