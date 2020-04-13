@@ -1,0 +1,24 @@
+agent:
+  ip: 127.0.0.1
+  port: 9002
+
+verifier:
+  ip: 127.0.0.1
+  port: 8881
+
+certs:
+  tls_dir: default
+  ca_cert: default
+  my_cert: default
+  private_key: default
+  tpm_cert_store: /var/lib/keylime/tpm_cert_store/
+  private_key_pw: default
+  registrar_ca_cert: default
+  registrar_my_cert: default
+  registrar_private_key: default
+  registrar_private_key_pw: default
+
+max_payload_size: 1048576
+
+tpm_policy: [{"22":["0000000000000000000000000000000000000001","0000000000000000000000000000000000000000000000000000000000000001","000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000001","ffffffffffffffffffffffffffffffffffffffff","ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff","ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"],"15":["0000000000000000000000000000000000000000","0000000000000000000000000000000000000000000000000000000000000000","000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000"]}]
+

@@ -36,6 +36,16 @@ import (
 	"github.com/spf13/viper"
 )
 
+type AgentResults struct {
+	Code    int    `json:"code"`
+	Status  string `json:"status"`
+	Results struct {
+		Uuids []struct {
+			AgentID string `json:"agent_id"`
+		} `json:"uuids"`
+	} `json:"results"`
+}
+
 type JsonResults struct {
 	Code    int    `json:"code"`
 	Status  string `json:"status"`
@@ -80,10 +90,11 @@ var listCmd = &cobra.Command{
 		}
 
 		var urlreq string
-		var verifier_ip = viper.GetString("verifier_ip")
-		var verifier_port = viper.GetString("verifier_port")
+		var listing bool
+		var verifier_ip = viper.GetString("verifier.ip")
+		var verifier_port = viper.GetString("verifier.port")
 		// fmt.Println("uuid exists?", viper.IsSet("uuid"))
-		// fmt.Println("Get a flag:", viper.GetString("uuid"))
+		//fmt.Println("Get a flag:", viper.GetString("v"))
 		// fmt.Println("Get a port:", viper.GetInt("agent_port"))
 
 		//priv, err := ioutil.ReadFile("/var/lib/keylime/cv_ca/client-private.pem")
@@ -119,7 +130,7 @@ var listCmd = &cobra.Command{
 			urlreq = fmt.Sprintf("%s%s", baseurl, viper.GetString("uuid"))
 
 		} else {
-			// var listing bool = true
+			listing = true
 			urlreq = fmt.Sprintf("%s", baseurl)
 		}
 
@@ -136,7 +147,6 @@ var listCmd = &cobra.Command{
 		if err != nil {
 			log.Fatal(err)
 		}
-		fmt.Println(string(responseBody))
 
 		if response.StatusCode == 503 {
 			log.Printf("Cannot connect to Verifier at %v with Port %v timed out. Connection refused.", verifier_ip, verifier_port)
@@ -145,9 +155,17 @@ var listCmd = &cobra.Command{
 		} else if response.StatusCode == 404 {
 			log.Printf("Agent %v does not exist on the verifier. Please try to add or update agent.", viper.GetString("uuid"))
 		} else if response.StatusCode == 200 {
-			var jsonresults JsonResults
-			json.Unmarshal(responseBody, &jsonresults)
-			log.Printf("Agent Status: %v", states[jsonresults.Results.OperationalState])
+			if listing {
+				// AgentResults
+				//fmt.Println(string(responseBody))
+				var agentresults AgentResults
+				json.Unmarshal([]byte(responseBody), &agentresults)
+				log.Printf("Agents: %v", agentresults.Results.Uuids)
+			} else {
+				var jsonresults JsonResults
+				json.Unmarshal(responseBody, &jsonresults)
+				log.Printf("Agent Status: %v", states[jsonresults.Results.OperationalState])
+			}
 		} else {
 			log.Printf("Unexpected response from Cloud Verifier: %v.", http.StatusText(response.StatusCode))
 		}
@@ -156,6 +174,6 @@ var listCmd = &cobra.Command{
 
 func init() {
 	rootCmd.AddCommand(listCmd)
-	listCmd.PersistentFlags().String("uuid", "", "The UUID of the Agent to list")
-	viper.BindPFlag("uuid", listCmd.PersistentFlags().Lookup("uuid"))
+	// listCmd.PersistentFlags().String("uuid", "", "The UUID of the Agent to list")
+	// viper.BindPFlag("uuid", listCmd.PersistentFlags().Lookup("uuid"))
 }

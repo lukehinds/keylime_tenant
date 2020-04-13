@@ -64,41 +64,18 @@ func init() {
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
-	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
+	rootCmd.PersistentFlags().String("v", "", "The IP Address of the Verifier")
+	viper.BindPFlag("v", rootCmd.PersistentFlags().Lookup("v"))
+
+	rootCmd.PersistentFlags().String("t", "", "The IP Address of the Agent")
+	viper.BindPFlag("t", rootCmd.PersistentFlags().Lookup("t"))
+
+	rootCmd.PersistentFlags().Int("tp", 9002, "The Port of the Agent")
+	viper.BindPFlag("tp", rootCmd.PersistentFlags().Lookup("tp"))
+
+	rootCmd.PersistentFlags().String("uuid", "", "The UUID of the Agent to list")
+	viper.BindPFlag("uuid", rootCmd.PersistentFlags().Lookup("uuid"))
 }
-
-// initConfig reads in config file and ENV variables if set.
-// func initConfig() {
-// 	if cfgFile != "" {
-// 		// Use config file from the flag.
-// 		viper.SetConfigFile(cfgFile)
-// 		viper.SetConfigType("toml")
-// 	} else {
-// 		// Find home directory.
-// 		home, err := homedir.Dir()
-// 		if err != nil {
-// 			fmt.Println(err)
-// 			os.Exit(1)
-// 		}
-// 		fmt.Println(home)
-
-// 		// Search config in home directory with name ".keylime_tenant" (without extension).
-// 		//viper.AddConfigPath(home)
-// 		viper.SetConfigType("toml")
-
-// 		viper.SetConfigName(".keylime_tenant")
-// 		viper.SetConfigFile("home")
-// 	}
-
-// 	//viper.AutomaticEnv() // read in environment variables that match
-
-// 	// If a config file is found, read it in.
-// 	if err := viper.ReadInConfig(); err == nil {
-// 		fmt.Println("Using config file:", viper.ConfigFileUsed())
-// 	} else {
-// 		fmt.Println("Config file not found:", viper.ConfigFileUsed())
-// 	}
-// }
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
@@ -115,7 +92,7 @@ func initConfig() {
 		// Search config in home directory with name ".pask" (without extension).
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".keylime_tenant")
-		viper.SetConfigType("toml")
+		viper.SetConfigType("yaml")
 
 		// In the succeeding line, the reader will note that
 		// ReadInConfig returns an error, and I am intentionally
